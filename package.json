@@ -1,0 +1,13 @@
+{
+  "name": "painel-de-noticia",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Painel de Notícias Fullstack - React + Node.js + Prisma ORM",
+  "scripts": {
+    "dev:client": "npm --prefix client run dev",
+    "dev:server": "npm --prefix server run dev",
+    "build:client": "npm --prefix client run build",
+    "prisma:studio": "npm --prefix server exec prisma studio"
+  }
+}
+

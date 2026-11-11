@@ -1,0 +1,615 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Painel de Notícias API",
+    "version": "1.0.0",
+    "description": "Documentação Swagger da API do Painel Digital de Notícias (CashFlow). Desenvolvida sob Arquitetura MVC com Node.js, Express e Prisma ORM (SQLite).",
+    "contact": {
+      "name": "Suporte do Sistema"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000/api",
+      "description": "Servidor Local de Desenvolvimento"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Notícias",
+      "description": "Operações de exibição, criação e exclusão de notícias do carrossel"
+    },
+    {
+      "name": "Autenticação & Usuários",
+      "description": "Gerenciamento de acesso e usuários institucionais"
+    },
+    {
+      "name": "Sistema",
+      "description": "Status e integridade da API"
+    }
+  ],
+  "paths": {
+    "/status": {
+      "get": {
+        "tags": ["Sistema"],
+        "summary": "Verifica status da API",
+        "description": "Retorna o status de conexão, arquitetura ativa e catálogo de endpoints.",
+        "responses": {
+          "200": {
+            "description": "API operando normalmente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/news": {
+      "get": {
+        "tags": ["Notícias"],
+        "summary": "Lista todas as notícias",
+        "description": "Recupera a lista de notícias cadastradas no banco de dados SQLite, com suporte a filtros.",
+        "parameters": [
+          {
+            "name": "active",
+            "in": "query",
+            "description": "Se verdadeiro (true), retorna apenas notícias ativas que não expiraram",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "example": true
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "description": "Filtra notícias por categoria específica (ex: Inovação, Aviso Urgente, Eventos)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "Inovação"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de notícias recuperada com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/News" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Notícias"],
+        "summary": "Cadastra e salva uma nova notícia no banco de dados (CREATE)",
+        "description": "Cria uma nova notícia no SQLite. O tempo de rotação no carrossel (`slideDuration`) e o tempo de expiração (`expiresAt`) podem ser configurados.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateNewsInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Notícia salva com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Notícia criada com sucesso" },
+                    "data": { "$ref": "#/components/schemas/News" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/news/{id}": {
+      "delete": {
+        "tags": ["Notícias"],
+        "summary": "Exclui uma notícia do banco de dados (DELETE)",
+        "description": "Remove permanentemente uma notícia do banco de dados SQLite através do seu ID numérico.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID numérico da notícia a ser removida",
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notícia removida com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Notícia removida com sucesso" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "integer", "example": 1 }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/news/seed/demo": {
+      "post": {
+        "tags": ["Notícias"],
+        "summary": "Popula o banco com notícias de demonstração",
+        "description": "Insere dados iniciais no SQLite se a tabela de notícias estiver vazia.",
+        "responses": {
+          "200": {
+            "description": "Banco já contém registros",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Banco já contém notícias" }
+                  }
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Notícias iniciais criadas com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Banco populado com sucesso" },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/News" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["Autenticação & Usuários"],
+        "summary": "Autentica usuário institucional",
+        "description": "Valida email/login e senha, retornando os dados do usuário e token de autenticação.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login realizado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Autenticação realizada com sucesso" },
+                    "data": { "$ref": "#/components/schemas/AuthResponse" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "description": "Credenciais incorretas ou não autorizadas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": false },
+                    "error": { "type": "string", "example": "Senha incorreta" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "tags": ["Autenticação & Usuários"],
+        "summary": "Cadastra novo usuário",
+        "description": "Cria um novo usuário institucional para acesso ao painel.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Usuário registrado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Usuário cadastrado com sucesso" },
+                    "data": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "409": {
+            "description": "Email já cadastrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": false },
+                    "error": { "type": "string", "example": "Este e-mail já está cadastrado" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/users": {
+      "get": {
+        "tags": ["Autenticação & Usuários"],
+        "summary": "Lista usuários cadastrados",
+        "description": "Retorna todos os usuários cadastrados de forma segura (sem expor hashes de senhas).",
+        "responses": {
+          "200": {
+            "description": "Lista de usuários recuperada com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/User" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "News": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "1",
+            "description": "Identificador da notícia em formato string para compatibilidade com o frontend"
+          },
+          "numericId": {
+            "type": "integer",
+            "example": 1,
+            "description": "ID numérico primário do banco de dados"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["text", "image"],
+            "example": "image",
+            "description": "Tipo de notícia (imagem ou texto com gradiente)"
+          },
+          "title": {
+            "type": "string",
+            "example": "Novo Campus Tecnológico Inaugurado",
+            "description": "Título principal exibido no slide"
+          },
+          "content": {
+            "type": "string",
+            "example": "Instalações de última geração abertas para a comunidade com laboratórios de IA e robótica.",
+            "description": "Descrição ou detalhes da notícia"
+          },
+          "imageUrl": {
+            "type": "string",
+            "example": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200",
+            "description": "URL ou Data URL em base64 da foto da notícia"
+          },
+          "category": {
+            "type": "string",
+            "example": "Inovação",
+            "description": "Categoria da notícia (ex: Geral, Urgente, RH, Eventos)"
+          },
+          "bgColor": {
+            "type": "string",
+            "example": "#4f46e5",
+            "description": "Gradiente Tailwind ou cor hexadecimal de fundo para notícias em texto"
+          },
+          "slideDuration": {
+            "type": "integer",
+            "example": 5,
+            "description": "Tempo em segundos que esta notícia permanecerá visível na rotação do carrossel"
+          },
+          "expiresAt": {
+            "type": "integer",
+            "nullable": true,
+            "example": 1794438000000,
+            "description": "Timestamp em milissegundos da expiração da notícia (ou null para permanente)"
+          },
+          "expiresAtIso": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "example": "2026-11-12T00:00:00.000Z"
+          },
+          "isExpired": {
+            "type": "boolean",
+            "example": false,
+            "description": "Indica se a notícia já ultrapassou o tempo de validade"
+          },
+          "author": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "id": { "type": "integer", "example": 1 },
+              "name": { "type": "string", "example": "Administrador" },
+              "email": { "type": "string", "example": "admin@painel.com" }
+            }
+          },
+          "createdAt": {
+            "type": "integer",
+            "example": 1794430000000
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-11-11T20:00:00.000Z"
+          }
+        }
+      },
+      "CreateNewsInput": {
+        "type": "object",
+        "required": ["title"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["text", "image"],
+            "default": "text",
+            "example": "image"
+          },
+          "title": {
+            "type": "string",
+            "example": "Workshop de Tecnologia na Sexta-feira",
+            "description": "Título principal da notícia (Obrigatório)"
+          },
+          "content": {
+            "type": "string",
+            "example": "Treinamento prático sobre novidades de desenvolvimento e automação.",
+            "description": "Detalhes ou corpo da notícia"
+          },
+          "imageUrl": {
+            "type": "string",
+            "example": "https://images.unsplash.com/photo-1531482615713-2afd69097998?w=1200",
+            "description": "URL ou Base64 da imagem (Obrigatório se type for image)"
+          },
+          "category": {
+            "type": "string",
+            "default": "Geral",
+            "example": "Eventos"
+          },
+          "bgColor": {
+            "type": "string",
+            "default": "from-indigo-600 via-purple-600 to-pink-600",
+            "example": "from-amber-600 via-orange-600 to-red-600"
+          },
+          "slideDuration": {
+            "type": "integer",
+            "default": 5,
+            "example": 10,
+            "description": "Segundos de permanência no carrossel (mínimo 2)"
+          },
+          "expiresAt": {
+            "type": "integer",
+            "nullable": true,
+            "example": 1794439000000,
+            "description": "Timestamp em ms de validade ou null se permanente"
+          },
+          "authorId": {
+            "type": "integer",
+            "nullable": true,
+            "example": 1
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "email": { "type": "string", "example": "admin@painel.com" },
+          "name": { "type": "string", "example": "Administrador" },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-11-11T20:00:00.000Z"
+          }
+        }
+      },
+      "LoginInput": {
+        "type": "object",
+        "required": ["password"],
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "example": "admin@painel.com",
+            "description": "Email ou nome de usuário institucional"
+          },
+          "email": {
+            "type": "string",
+            "example": "admin@painel.com",
+            "description": "Alternativa para identifier"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "example": "senhaSegura123"
+          }
+        }
+      },
+      "RegisterInput": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "example": "novo.usuario@painel.com" },
+          "name": { "type": "string", "example": "Novo Usuário" },
+          "password": { "type": "string", "format": "password", "example": "senhaSegura123" }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "user": { "$ref": "#/components/schemas/User" },
+          "token": {
+            "type": "string",
+            "example": "mock-jwt-token-1-1794430000000"
+          }
+        }
+      },
+      "StatusResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "example": "online" },
+          "message": { "type": "string", "example": "API do Painel de Notícias em execução (Arquitetura MVC)" },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "endpoints": {
+            "type": "object",
+            "properties": {
+              "news": { "type": "string", "example": "/api/news" },
+              "auth": { "type": "string", "example": "/api/auth" }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "BadRequestError": {
+        "description": "Dados da requisição inválidos ou campos obrigatórios ausentes",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": { "type": "boolean", "example": false },
+                "error": { "type": "string", "example": "O título da notícia é obrigatório" }
+              }
+            }
+          }
+        }
+      },
+      "NotFoundError": {
+        "description": "Recurso não encontrado",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": { "type": "boolean", "example": false },
+                "error": { "type": "string", "example": "Notícia não encontrado(a)" }
+              }
+            }
+          }
+        }
+      },
+      "InternalServerError": {
+        "description": "Erro interno no servidor",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": { "type": "boolean", "example": false },
+                "error": { "type": "string", "example": "Erro interno do servidor" },
+                "details": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
