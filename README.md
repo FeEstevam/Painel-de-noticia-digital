@@ -1,4 +1,4 @@
-# Painel de Notícias (CashFlow)
+# Painel de Notícias
 
 Projeto Fullstack configurado com **React (Vite) + Tailwind CSS** no Frontend e **Node.js (Express) + Prisma ORM** no Backend seguindo **Arquitetura MVC (Model-View-Controller)**.
 
