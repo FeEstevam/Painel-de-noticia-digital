@@ -72,6 +72,45 @@ class NewsController {
   }
 
   /**
+   * PUT /api/news/:id
+   * Atualiza uma notícia existente no banco de dados (UPDATE)
+   */
+  static async update(req, res) {
+    try {
+      const { id } = req.params;
+      const existing = await NewsModel.findById(id);
+
+      if (!existing) {
+        return ResponseView.notFound(res, 'Notícia');
+      }
+
+      const { type, title, content, imageUrl, category, bgColor, slideDuration, publishAt, expiresAt } = req.body;
+
+      const updated = await NewsModel.update(id, {
+        ...(type !== undefined && { type }),
+        ...(title !== undefined && { title: title.trim() }),
+        ...(content !== undefined && { content: content.trim() }),
+        ...(imageUrl !== undefined && { imageUrl: imageUrl ? imageUrl.trim() : null }),
+        ...(category !== undefined && { category: category.trim() }),
+        ...(bgColor !== undefined && { bgColor }),
+        ...(slideDuration !== undefined && { slideDuration: Math.max(2, Number(slideDuration)) }),
+        ...(publishAt !== undefined && { publishAt: publishAt || null }),
+        ...(expiresAt !== undefined && { expiresAt: expiresAt || null })
+      });
+
+      return ResponseView.success(
+        res,
+        NewsView.render(updated),
+        200,
+        'Notícia atualizada no banco de dados com sucesso'
+      );
+    } catch (error) {
+      console.error('Erro em NewsController.update:', error);
+      return ResponseView.error(res, 'Erro ao atualizar notícia no banco de dados', 500, error.message);
+    }
+  }
+
+  /**
    * DELETE /api/news/:id
    * Remove uma notícia do banco de dados (DELETE)
    */

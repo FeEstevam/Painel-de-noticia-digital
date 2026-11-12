@@ -168,3 +168,4 @@ class WeatherService {
 }
 
 module.exports = WeatherService;
+

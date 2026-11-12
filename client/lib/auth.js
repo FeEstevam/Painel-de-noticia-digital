@@ -1,4 +1,12 @@
-const API_AUTH_URL = 'http://localhost:5000/api/auth';
+// Detecta dinamicamente o IP ou hostname do servidor para autenticação na rede local
+const getApiAuthUrl = () => {
+  if (typeof window !== 'undefined' && window.location?.hostname) {
+    return `http://${window.location.hostname}:5000/api/auth`;
+  }
+  return 'http://localhost:5000/api/auth';
+};
+
+const API_AUTH_URL = getApiAuthUrl();
 
 /**
  * Autentica o usuário com identificador/email e senha

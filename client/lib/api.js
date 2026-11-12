@@ -1,4 +1,12 @@
-const API_BASE_URL = 'http://localhost:5000/api';
+// Detecta dinamicamente o IP ou hostname do servidor para funcionar na TV da sala e rede local
+const getApiBaseUrl = () => {
+  if (typeof window !== 'undefined' && window.location?.hostname) {
+    return `http://${window.location.hostname}:5000/api`;
+  }
+  return 'http://localhost:5000/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 /**
  * Cliente de integração da API do backend
@@ -31,6 +39,24 @@ export const api = {
     const json = await res.json();
     if (!res.ok || !json.success) {
       throw new Error(json.error || 'Erro ao criar notícia na API');
+    }
+    return json.data;
+  },
+
+  /**
+   * Atualiza uma notícia existente no backend
+   * @param {string|number} id
+   * @param {Object} newsData
+   */
+  async updateNews(id, newsData) {
+    const res = await fetch(`${API_BASE_URL}/news/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newsData)
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.error || 'Erro ao atualizar notícia na API');
     }
     return json.data;
   },

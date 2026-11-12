@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Database, Lock, LogIn, SlidersHorizontal, User, LogOut } from 'lucide-react';
+import { Sparkles, Database, Lock, SlidersHorizontal, LogOut } from 'lucide-react';
 import DisplayMode from '../components/DisplayMode';
 import { api } from '../../lib/api';
 import { isAuthenticated, getUser, logout } from '../../lib/auth';
@@ -67,6 +67,8 @@ const INITIAL_NEWS = [
 
 export default function DisplayIndex() {
   const navigate = useNavigate();
+
+  // Inicializa imediatamente com o cache local mais recente
   const [newsList, setNewsList] = useState(() => {
     try {
       const saved = localStorage.getItem('newsList');
@@ -83,39 +85,97 @@ export default function DisplayIndex() {
   const [isDbConnected, setIsDbConnected] = useState(false);
   const [user, setUser] = useState(() => getUser());
 
-  // Carrega notícias do banco de dados na inicialização
-  useEffect(() => {
-    async function loadNews() {
-      try {
-        const data = await api.getNews();
-        if (Array.isArray(data) && data.length > 0) {
-          setNewsList(data);
-          setIsDbConnected(true);
-        } else {
-          const seeded = await api.seedDemo();
-          if (Array.isArray(seeded) && seeded.length > 0) {
-            setNewsList(seeded);
+  // Função central de carregamento de notícias (Banco SQLite + Fallback Local)
+  const syncNews = useCallback(async () => {
+    try {
+      const data = await api.getNews();
+      if (Array.isArray(data) && data.length > 0) {
+        setNewsList(data);
+        localStorage.setItem('newsList', JSON.stringify(data));
+        setIsDbConnected(true);
+        return;
+      } else if (Array.isArray(data) && data.length === 0) {
+        // Se o banco estiver vazio, verifica se temos dados locais antes de semear
+        const saved = localStorage.getItem('newsList');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setNewsList(parsed);
+            setIsDbConnected(true);
+            return;
           }
-          setIsDbConnected(true);
         }
-      } catch (err) {
-        console.warn('Backend SQLite offline no momento, utilizando cache local:', err.message);
-        setIsDbConnected(false);
+        const seeded = await api.seedDemo();
+        if (Array.isArray(seeded) && seeded.length > 0) {
+          setNewsList(seeded);
+          localStorage.setItem('newsList', JSON.stringify(seeded));
+        }
+        setIsDbConnected(true);
+        return;
+      }
+    } catch (err) {
+      setIsDbConnected(false);
+      // Fallback gracioso: restaura do localStorage
+      try {
+        const saved = localStorage.getItem('newsList');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setNewsList(parsed);
+          }
+        }
+      } catch {
+        // fallback
       }
     }
-
-    loadNews();
-    const interval = setInterval(loadNews, 30 * 1000); // sincroniza a cada 30 segundos
-    return () => clearInterval(interval);
   }, []);
 
-  // Monitoramento suave para ativação automática de notícias agendadas
+  // Carga inicial e polling periódico de atualização
   useEffect(() => {
-    const timer = setInterval(() => {
-      setNewsList((prev) => [...prev]);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, []);
+    syncNews();
+    const interval = setInterval(syncNews, 5000); // Sincroniza a cada 5 segundos
+    return () => clearInterval(interval);
+  }, [syncNews]);
+
+  // Sincronização reativa instantânea (mesma aba e entre abas)
+  useEffect(() => {
+    // 1. Evento disparado imediatamente ao salvar no Gerenciador (mesma janela)
+    const handleNewsUpdated = (e) => {
+      if (e.detail && Array.isArray(e.detail)) {
+        setNewsList(e.detail);
+      }
+    };
+
+    // 2. Evento disparado ao salvar em outra aba do navegador (storage)
+    const handleStorageChange = (e) => {
+      if (e.key === 'newsList' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            setNewsList(parsed);
+          }
+        } catch {
+          // ignora
+        }
+      }
+    };
+
+    // 3. Ao focar na tela / voltar da tela de gerenciamento
+    const handleFocus = () => {
+      setUser(getUser());
+      syncNews();
+    };
+
+    window.addEventListener('newsUpdated', handleNewsUpdated);
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      window.removeEventListener('newsUpdated', handleNewsUpdated);
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [syncNews]);
 
   // Redireciona para o Gerenciador (se autenticado vai para /painel, senão vai para /login)
   const handleAccessManager = () => {

@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import {
   Plus,
+  Pencil,
   Trash2,
   Clock,
   Image as ImageIcon,
@@ -119,7 +120,7 @@ function getRelativeTimeDescription(targetTs, isFuture = true) {
   return `${mins}m`;
 }
 
-export default function NewsManager({ newsList, onAddNews, onDeleteNews }) {
+export default function NewsManager({ newsList, onAddNews, onUpdateNews, onDeleteNews }) {
   const [formData, setFormData] = useState({
     type: 'text', // 'text', 'image', 'weather', 'feed'
     title: '',
@@ -138,12 +139,62 @@ export default function NewsManager({ newsList, onAddNews, onDeleteNews }) {
     expiresAtDateTime: ''
   });
 
+  const [editingId, setEditingId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'live', 'scheduled', 'expired'
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const fileInputRef = useRef(null);
+  const formRef = useRef(null);
 
   const now = Date.now();
+
+  // Inicia o modo de edição para um item existente
+  const handleStartEdit = (item) => {
+    setEditingId(item.id);
+
+    const publishAtDate = item.publishAt ? new Date(item.publishAt) : null;
+    const expiresAtDate = item.expiresAt ? new Date(item.expiresAt) : null;
+
+    setFormData({
+      type: item.type || 'text',
+      title: item.title || '',
+      content: item.content || '',
+      imageUrl: item.imageUrl || '',
+      category: item.category || 'Geral',
+      slideDuration: String(item.slideDuration || 5),
+      gradient: item.bgColor || 'from-indigo-600 via-purple-600 to-pink-600',
+      feedCategory: item.type === 'feed' ? (item.category || 'geral') : 'geral',
+      startType: publishAtDate ? 'scheduled' : 'now',
+      publishAtDateTime: publishAtDate ? publishAtDate.toISOString().slice(0, 16) : '',
+      endType: expiresAtDate ? 'datetime' : 'never',
+      durationMinutes: '60',
+      expiresAtDateTime: expiresAtDate ? expiresAtDate.toISOString().slice(0, 16) : ''
+    });
+
+    if (formRef.current) {
+      formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  // Cancela a edição e restaura o formulário
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setFormData({
+      type: 'text',
+      title: '',
+      content: '',
+      imageUrl: '',
+      category: 'Geral',
+      slideDuration: '5',
+      gradient: 'from-indigo-600 via-purple-600 to-pink-600',
+      feedCategory: 'geral',
+      startType: 'now',
+      publishAtDateTime: '',
+      endType: 'never',
+      durationMinutes: '60',
+      expiresAtDateTime: ''
+    });
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -257,8 +308,8 @@ export default function NewsManager({ newsList, onAddNews, onDeleteNews }) {
 
     const slideDuration = Math.max(2, parseInt(formData.slideDuration, 10) || 5);
 
-    const newNews = {
-      id: Date.now().toString(),
+    const newsPayload = {
+      id: editingId ? String(editingId) : Date.now().toString(),
       type: formData.type,
       title: titleToSave,
       content: formData.content,
@@ -271,24 +322,15 @@ export default function NewsManager({ newsList, onAddNews, onDeleteNews }) {
       bgColor: formData.gradient
     };
 
-    onAddNews(newNews);
+    if (editingId && onUpdateNews) {
+      onUpdateNews(editingId, newsPayload);
+      setEditingId(null);
+    } else {
+      onAddNews(newsPayload);
+    }
 
     // Resetar formulário
-    setFormData({
-      type: 'text',
-      title: '',
-      content: '',
-      imageUrl: '',
-      category: 'Geral',
-      slideDuration: '5',
-      gradient: 'from-indigo-600 via-purple-600 to-pink-600',
-      feedCategory: 'geral',
-      startType: 'now',
-      publishAtDateTime: '',
-      endType: 'never',
-      durationMinutes: '60',
-      expiresAtDateTime: ''
-    });
+    handleCancelEdit();
   };
 
   // Classifica o estado de cada notícia
@@ -355,16 +397,35 @@ export default function NewsManager({ newsList, onAddNews, onDeleteNews }) {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 w-full">
-      {/* FORMULÁRIO DE CADASTRO (COLUNA 5 - RESPONSIVO) */}
-      <div className="lg:col-span-5 bg-slate-900/90 border border-slate-800 p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-3xl shadow-xl backdrop-blur-xl h-fit">
-        <div className="flex items-center gap-3 mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-slate-800">
-          <div className="p-2 sm:p-2.5 bg-indigo-600/10 text-indigo-400 border border-indigo-500/20 rounded-xl">
-            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+      {/* FORMULÁRIO DE CADASTRO / EDIÇÃO (COLUNA 5 - RESPONSIVO) */}
+      <div ref={formRef} className="lg:col-span-5 bg-slate-900/90 border border-slate-800 p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-3xl shadow-xl backdrop-blur-xl h-fit">
+        <div className="flex items-center justify-between gap-3 mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className={`p-2 sm:p-2.5 rounded-xl border ${
+              editingId
+                ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                : 'bg-indigo-600/10 text-indigo-400 border-indigo-500/20'
+            }`}>
+              {editingId ? <Pencil className="w-4 h-4 sm:w-5 sm:h-5" /> : <Plus className="w-4 h-4 sm:w-5 sm:h-5" />}
+            </div>
+            <div>
+              <h2 className="text-base sm:text-lg font-bold text-white">
+                {editingId ? 'Editar Conteúdo / Notícia' : 'Criar Nova Notícia ou Cena'}
+              </h2>
+              <p className="text-[11px] sm:text-xs text-slate-400">
+                {editingId ? 'Altere as informações abaixo e salve' : 'Configure o conteúdo e o agendamento antecipado'}
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-base sm:text-lg font-bold text-white">Criar Nova Notícia ou Cena</h2>
-            <p className="text-[11px] sm:text-xs text-slate-400">Configure o conteúdo e o agendamento antecipado</p>
-          </div>
+          {editingId && (
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              className="text-[11px] font-semibold text-slate-400 hover:text-white px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors cursor-pointer"
+            >
+              Cancelar
+            </button>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
@@ -901,23 +962,42 @@ export default function NewsManager({ newsList, onAddNews, onDeleteNews }) {
             </div>
           </div>
 
-          {/* Botão de Publicar / Agendar */}
-          <button
-            type="submit"
-            className="w-full py-3 sm:py-3.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-2 mt-2 cursor-pointer"
-          >
-            {formData.startType === 'scheduled' ? (
-              <>
-                <CalendarDays className="w-4 h-4" />
-                <span>Salvar e Agendar Conteúdo</span>
-              </>
-            ) : (
-              <>
-                <Zap className="w-4 h-4" />
-                <span>Publicar no Carrossel Agora</span>
-              </>
-            )}
-          </button>
+          {/* Botão de Publicar / Agendar / Salvar Edição */}
+          {editingId ? (
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="submit"
+                className="flex-1 py-3 sm:py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-lg shadow-amber-500/25 active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Salvar Alterações</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="px-4 py-3 sm:py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer"
+              >
+                Cancelar
+              </button>
+            </div>
+          ) : (
+            <button
+              type="submit"
+              className="w-full py-3 sm:py-3.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-2 mt-2 cursor-pointer"
+            >
+              {formData.startType === 'scheduled' ? (
+                <>
+                  <CalendarDays className="w-4 h-4" />
+                  <span>Salvar e Agendar Conteúdo</span>
+                </>
+              ) : (
+                <>
+                  <Zap className="w-4 h-4" />
+                  <span>Publicar no Carrossel Agora</span>
+                </>
+              )}
+            </button>
+          )}
         </form>
       </div>
 
@@ -1055,14 +1135,28 @@ export default function NewsManager({ newsList, onAddNews, onDeleteNews }) {
                     </div>
                   </div>
 
-                  {/* Botão de Remoção */}
-                  <button
-                    onClick={() => onDeleteNews(item.id)}
-                    className="p-2 sm:p-2.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all border border-transparent hover:border-red-500/20 cursor-pointer shrink-0"
-                    title="Remover Conteúdo"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {/* Ações: Editar e Excluir */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => handleStartEdit(item)}
+                      className={`p-2 sm:p-2.5 rounded-xl transition-all border cursor-pointer ${
+                        editingId === item.id
+                          ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold shadow-md shadow-amber-500/30'
+                          : 'text-slate-400 hover:text-indigo-300 hover:bg-indigo-500/10 border-transparent hover:border-indigo-500/30'
+                      }`}
+                      title="Editar Conteúdo"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+
+                    <button
+                      onClick={() => onDeleteNews(item.id)}
+                      className="p-2 sm:p-2.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all border border-transparent hover:border-red-500/20 cursor-pointer"
+                      title="Remover Conteúdo"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               );
             })

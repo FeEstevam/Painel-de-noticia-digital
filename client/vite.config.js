@@ -11,6 +11,7 @@ export default defineConfig({
     }
   },
   server: {
+    host: true, // Permite acesso pela rede local / Wi-Fi (Smart TV, celulares, totens)
     port: 3000
   }
 });

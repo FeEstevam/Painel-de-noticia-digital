@@ -158,26 +158,58 @@ export default function NewsPainel() {
   const handleAddNews = async (newNews) => {
     try {
       const savedNews = await api.createNews(newNews);
-      setNewsList((prev) => [savedNews, ...prev]);
+      const nextList = [savedNews, ...newsList];
+      setNewsList(nextList);
+      localStorage.setItem('newsList', JSON.stringify(nextList));
+      window.dispatchEvent(new CustomEvent('newsUpdated', { detail: nextList }));
       setIsDbConnected(true);
       showToast('Notícia salva no banco de dados com sucesso!');
     } catch (err) {
       console.warn('Erro ao salvar no banco, armazenando em cache:', err.message);
-      setNewsList((prev) => [newNews, ...prev]);
+      const nextList = [newNews, ...newsList];
+      setNewsList(nextList);
+      localStorage.setItem('newsList', JSON.stringify(nextList));
+      window.dispatchEvent(new CustomEvent('newsUpdated', { detail: nextList }));
       showToast('Salvo em cache local (inicie o backend para salvar no SQLite)', 'info');
     }
   };
 
-  // OPERAÇÃO 2: EXCLUIR NOTÍCIA DO BANCO DE DADOS (DELETE)
+  // OPERAÇÃO 2: ATUALIZAR NOTÍCIA NO BANCO DE DADOS (UPDATE)
+  const handleUpdateNews = async (id, updatedNews) => {
+    try {
+      const saved = await api.updateNews(id, updatedNews);
+      const nextList = newsList.map((item) => (String(item.id) === String(id) ? saved : item));
+      setNewsList(nextList);
+      localStorage.setItem('newsList', JSON.stringify(nextList));
+      window.dispatchEvent(new CustomEvent('newsUpdated', { detail: nextList }));
+      setIsDbConnected(true);
+      showToast('Conteúdo atualizado com sucesso!');
+    } catch (err) {
+      console.warn('Erro ao atualizar no banco, atualizando em cache:', err.message);
+      const nextList = newsList.map((item) => (String(item.id) === String(id) ? { ...item, ...updatedNews } : item));
+      setNewsList(nextList);
+      localStorage.setItem('newsList', JSON.stringify(nextList));
+      window.dispatchEvent(new CustomEvent('newsUpdated', { detail: nextList }));
+      showToast('Alteração salva localmente', 'info');
+    }
+  };
+
+  // OPERAÇÃO 3: EXCLUIR NOTÍCIA DO BANCO DE DADOS (DELETE)
   const handleDeleteNews = async (id) => {
     try {
       await api.deleteNews(id);
-      setNewsList((prev) => prev.filter((item) => String(item.id) !== String(id)));
+      const nextList = newsList.filter((item) => String(item.id) !== String(id));
+      setNewsList(nextList);
+      localStorage.setItem('newsList', JSON.stringify(nextList));
+      window.dispatchEvent(new CustomEvent('newsUpdated', { detail: nextList }));
       setIsDbConnected(true);
       showToast('Notícia excluída do banco de dados.');
     } catch (err) {
       console.warn('Erro ao deletar no banco:', err.message);
-      setNewsList((prev) => prev.filter((item) => String(item.id) !== String(id)));
+      const nextList = newsList.filter((item) => String(item.id) !== String(id));
+      setNewsList(nextList);
+      localStorage.setItem('newsList', JSON.stringify(nextList));
+      window.dispatchEvent(new CustomEvent('newsUpdated', { detail: nextList }));
       showToast('Notícia removida da lista.', 'info');
     }
   };
@@ -311,6 +343,7 @@ export default function NewsPainel() {
           <NewsManager
             newsList={newsList}
             onAddNews={handleAddNews}
+            onUpdateNews={handleUpdateNews}
             onDeleteNews={handleDeleteNews}
           />
         )}
