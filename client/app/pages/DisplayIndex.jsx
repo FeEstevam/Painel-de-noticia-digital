@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, Database, Lock, SlidersHorizontal, LogOut } from 'lucide-react';
 import DisplayMode from '../components/DisplayMode';
-import { api } from '../../lib/api';
+import { api, getSSEUrl } from '../../lib/api';
 import { isAuthenticated, getUser, logout } from '../../lib/auth';
 
 const INITIAL_NEWS = [
@@ -130,11 +130,38 @@ export default function DisplayIndex() {
     }
   }, []);
 
-  // Carga inicial e polling periódico de atualização
+  // Carga inicial + conexão SSE em tempo real (substitui o polling de 5s)
   useEffect(() => {
-    syncNews();
-    const interval = setInterval(syncNews, 5000); // Sincroniza a cada 5 segundos
-    return () => clearInterval(interval);
+    syncNews(); // Carrega imediatamente na montagem
+
+    const sseUrl = getSSEUrl();
+    const eventSource = new EventSource(sseUrl);
+
+    // Quando o servidor confirma a conexão
+    eventSource.addEventListener('CONNECTED', () => {
+      console.log('[SSE] Conectado ao servidor em tempo real');
+      setIsDbConnected(true);
+    });
+
+    // Recarrega a lista quando qualquer CRUD acontece
+    const handleChange = () => syncNews();
+    eventSource.addEventListener('NEWS_CREATED', handleChange);
+    eventSource.addEventListener('NEWS_UPDATED', handleChange);
+    eventSource.addEventListener('NEWS_DELETED', handleChange);
+    eventSource.addEventListener('NEWS_SEEDED', handleChange);
+
+    // Erros: o EventSource reconecta sozinho; apenas atualizamos o indicador
+    eventSource.onerror = () => {
+      setIsDbConnected(false);
+    };
+
+    // Quando reconecta com sucesso após um erro
+    eventSource.onopen = () => {
+      setIsDbConnected(true);
+      syncNews(); // Puxa novidades que possam ter chegado durante a queda
+    };
+
+    return () => eventSource.close();
   }, [syncNews]);
 
   // Sincronização reativa instantânea (mesma aba e entre abas)

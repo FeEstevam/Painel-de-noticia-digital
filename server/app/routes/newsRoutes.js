@@ -1,7 +1,11 @@
 const express = require('express');
 const NewsController = require('../controller/newsController');
+const sseService = require('../service/sseService');
 
 const router = express.Router();
+
+// ── SSE: endpoint de tempo real (DEVE vir ANTES de /:id para não conflitar) ──
+router.get('/events', (req, res) => sseService.addClient(req, res));
 
 // Operações de Notícias: Listagem, Criação (create), Edição (update) e Exclusão (delete)
 router.get('/', NewsController.getAll);

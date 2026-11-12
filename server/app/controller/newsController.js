@@ -1,6 +1,7 @@
 const NewsModel = require('../model/newsModel');
 const NewsView = require('../view/newsView');
 const ResponseView = require('../view/responseView');
+const sseService = require('../service/sseService');
 
 /**
  * Controller de Notícias
@@ -59,12 +60,12 @@ class NewsController {
         authorId: authorId || null
       });
 
-      return ResponseView.success(
-        res,
-        NewsView.render(created),
-        201,
-        'Notícia salva no banco de dados com sucesso'
-      );
+      const rendered = NewsView.render(created);
+
+      // Notifica todos os displays conectados via SSE
+      sseService.broadcast('NEWS_CREATED', rendered);
+
+      return ResponseView.success(res, rendered, 201, 'Notícia salva no banco de dados com sucesso');
     } catch (error) {
       console.error('Erro em NewsController.create:', error);
       return ResponseView.error(res, 'Erro ao salvar notícia no banco de dados', 500, error.message);
@@ -98,12 +99,12 @@ class NewsController {
         ...(expiresAt !== undefined && { expiresAt: expiresAt || null })
       });
 
-      return ResponseView.success(
-        res,
-        NewsView.render(updated),
-        200,
-        'Notícia atualizada no banco de dados com sucesso'
-      );
+      const rendered = NewsView.render(updated);
+
+      // Notifica todos os displays conectados via SSE
+      sseService.broadcast('NEWS_UPDATED', rendered);
+
+      return ResponseView.success(res, rendered, 200, 'Notícia atualizada no banco de dados com sucesso');
     } catch (error) {
       console.error('Erro em NewsController.update:', error);
       return ResponseView.error(res, 'Erro ao atualizar notícia no banco de dados', 500, error.message);
@@ -124,6 +125,10 @@ class NewsController {
       }
 
       await NewsModel.delete(id);
+
+      // Notifica todos os displays conectados via SSE
+      sseService.broadcast('NEWS_DELETED', { id: Number(id) });
+
       return ResponseView.success(res, { id: Number(id) }, 200, 'Notícia excluída do banco de dados');
     } catch (error) {
       console.error('Erro em NewsController.remove:', error);
@@ -201,7 +206,12 @@ class NewsController {
       }
 
       const all = await NewsModel.findAll();
-      return ResponseView.success(res, NewsView.renderMany(all), 201, 'Banco de dados populado com sucesso');
+      const rendered = NewsView.renderMany(all);
+
+      // Notifica todos os displays conectados via SSE
+      sseService.broadcast('NEWS_SEEDED', { count: rendered.length });
+
+      return ResponseView.success(res, rendered, 201, 'Banco de dados populado com sucesso');
     } catch (error) {
       console.error('Erro em NewsController.seed:', error);
       return ResponseView.error(res, 'Erro ao popular notícias', 500, error.message);

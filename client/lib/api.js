@@ -9,6 +9,11 @@ const getApiBaseUrl = () => {
 const API_BASE_URL = getApiBaseUrl();
 
 /**
+ * Retorna a URL do endpoint SSE para conexão em tempo real
+ */
+export const getSSEUrl = () => `${API_BASE_URL}/news/events`;
+
+/**
  * Cliente de integração da API do backend
  */
 export const api = {
