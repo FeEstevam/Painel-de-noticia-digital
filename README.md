@@ -99,7 +99,8 @@ painelDeNoticia/
 ├── .gitignore                  # Regras de exclusão (ignora dev.db, node_modules)
 └── README.md
 ```
-<img width="5491" height="11226" alt="diagram" src="https://github.com/user-attachments/assets/8de80070-a3a5-403e-80b7-d2760558c215" />
+<img width="4914" height="8421" alt="diagram" src="https://github.com/user-attachments/assets/2e66ab40-f177-4adb-9b42-7f7b80ad3287" />
+
 
 ---
 
