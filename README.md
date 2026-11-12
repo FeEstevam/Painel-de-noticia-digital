@@ -97,6 +97,7 @@ painelDeNoticia/
 ├── .gitignore                  # Regras de exclusão (ignora dev.db, node_modules)
 └── README.md
 ```
+<img width="5491" height="11226" alt="diagram" src="https://github.com/user-attachments/assets/8de80070-a3a5-403e-80b7-d2760558c215" />
 
 ---
 
@@ -136,6 +137,8 @@ painelDeNoticia/
 | `GET` | `/api/status` | Retorna status de execução e catálogo de rotas ativas |
 
 ---
+
+
 
 ## 🚀 Como Executar o Projeto
 
