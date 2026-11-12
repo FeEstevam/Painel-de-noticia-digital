@@ -40,6 +40,28 @@ const INITIAL_NEWS = [
     expiresAt: Date.now() + 45 * 60 * 1000,
     createdAt: Date.now(),
     bgColor: '#0891b2'
+  },
+  {
+    id: '4',
+    type: 'weather',
+    title: 'São Paulo, SP',
+    content: 'Previsão meteorológica ao vivo com temperatura, umidade e previsão para os próximos dias.',
+    category: 'Clima & Tempo',
+    slideDuration: 7,
+    expiresAt: null,
+    createdAt: Date.now(),
+    bgColor: 'from-sky-600 via-blue-700 to-indigo-950'
+  },
+  {
+    id: '5',
+    type: 'feed',
+    title: 'Giro de Notícias do Dia',
+    content: 'Principais manchetes e atualizações em tempo real estilo telejornal.',
+    category: 'Geral & Brasil',
+    slideDuration: 9,
+    expiresAt: null,
+    createdAt: Date.now(),
+    bgColor: 'from-rose-800 via-red-900 to-neutral-950'
   }
 ];
 
@@ -101,18 +123,12 @@ export default function NewsPainel() {
     }
   }, [newsList]);
 
-  // Temporizador para remoção de notícias expiradas (checa a cada segundo)
+  // Sincronização e monitoramento de agendamentos e expirações em tempo real
   useEffect(() => {
     const timer = setInterval(() => {
-      const now = Date.now();
-      setNewsList((prevList) => {
-        const filtered = prevList.filter((item) => !item.expiresAt || item.expiresAt > now);
-        if (filtered.length !== prevList.length) {
-          showToast('Notícia temporária expirou e foi removida do painel', 'info');
-        }
-        return filtered;
-      });
-    }, 1000);
+      // Força reavaliação suave a cada 5 segundos para transição automática de agendadas para 'No Ar'
+      setNewsList((prevList) => [...prevList]);
+    }, 5000);
 
     return () => clearInterval(timer);
   }, []);

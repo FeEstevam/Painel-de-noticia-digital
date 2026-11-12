@@ -15,9 +15,19 @@ class NewsModel {
 
     if (activeOnly) {
       const now = new Date();
-      where.OR = [
-        { expiresAt: null },
-        { expiresAt: { gt: now } }
+      where.AND = [
+        {
+          OR: [
+            { expiresAt: null },
+            { expiresAt: { gt: now } }
+          ]
+        },
+        {
+          OR: [
+            { publishAt: null },
+            { publishAt: { lte: now } }
+          ]
+        }
       ];
     }
 
@@ -67,6 +77,7 @@ class NewsModel {
         category: data.category || 'Geral',
         bgColor: data.bgColor || 'from-indigo-600 via-purple-600 to-pink-600',
         slideDuration: data.slideDuration ? Number(data.slideDuration) : 5,
+        publishAt: data.publishAt ? new Date(data.publishAt) : null,
         expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
         authorId: data.authorId ? Number(data.authorId) : null
       }
@@ -81,6 +92,9 @@ class NewsModel {
   static async update(id, data) {
     const updateData = { ...data };
 
+    if (updateData.publishAt !== undefined) {
+      updateData.publishAt = updateData.publishAt ? new Date(updateData.publishAt) : null;
+    }
     if (updateData.expiresAt !== undefined) {
       updateData.expiresAt = updateData.expiresAt ? new Date(updateData.expiresAt) : null;
     }

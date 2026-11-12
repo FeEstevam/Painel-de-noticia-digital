@@ -10,8 +10,11 @@ class NewsView {
     if (!news) return null;
 
     const expiresAtMs = news.expiresAt ? new Date(news.expiresAt).getTime() : null;
+    const publishAtMs = news.publishAt ? new Date(news.publishAt).getTime() : null;
     const nowMs = Date.now();
     const isExpired = expiresAtMs ? expiresAtMs <= nowMs : false;
+    const isScheduled = publishAtMs ? publishAtMs > nowMs : false;
+    const isLive = !isExpired && !isScheduled;
 
     return {
       id: String(news.id), // Compatibilidade com frontend (string ID)
@@ -23,9 +26,13 @@ class NewsView {
       category: news.category || 'Geral',
       bgColor: news.bgColor,
       slideDuration: news.slideDuration ? Number(news.slideDuration) : 5,
-      expiresAt: expiresAtMs, // Retorna em milissegundos para fácil cálculo no front
+      publishAt: publishAtMs, // Início da exibição em timestamp ms
+      publishAtIso: news.publishAt ? new Date(news.publishAt).toISOString() : null,
+      expiresAt: expiresAtMs, // Término da exibição em timestamp ms
       expiresAtIso: news.expiresAt ? new Date(news.expiresAt).toISOString() : null,
-      isExpired,
+      isScheduled, // Agendada para o futuro
+      isExpired,   // Já expirou
+      isLive,      // Atualmente visível no painel
       author: news.author ? {
         id: news.author.id,
         name: news.author.name,

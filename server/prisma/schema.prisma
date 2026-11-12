@@ -26,7 +26,8 @@ model News {
   category      String    @default("Geral")
   bgColor       String    @default("from-indigo-600 via-purple-600 to-pink-600")
   slideDuration Int       @default(5) // Tempo em segundos no carrossel
-  expiresAt     DateTime?
+  publishAt     DateTime? // Data e horário de início da exibição (agendamento antecipado)
+  expiresAt     DateTime? // Data e horário de término da exibição
   authorId  Int?
   author    User?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
   createdAt DateTime  @default(now())

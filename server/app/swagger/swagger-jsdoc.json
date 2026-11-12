@@ -26,6 +26,14 @@
     {
       "name": "Sistema",
       "description": "Status e integridade da API"
+    },
+    {
+      "name": "Clima & Temperatura",
+      "description": "Previsão meteorológica em tempo real e listagem de cidades"
+    },
+    {
+      "name": "Feed & Notícias Gerais",
+      "description": "Feed dinâmico de notícias e manchetes gerais em tempo real"
     }
   ],
   "paths": {
@@ -352,6 +360,116 @@
           }
         }
       }
+    },
+    "/weather": {
+      "get": {
+        "tags": ["Clima & Temperatura"],
+        "summary": "Obtém previsão do tempo ao vivo",
+        "description": "Retorna temperatura atual, sensação térmica, umidade, vento, extremos (máx/mín) e previsão dos próximos dias para exibição na cena de clima.",
+        "parameters": [
+          {
+            "name": "city",
+            "in": "query",
+            "description": "Nome da cidade brasileira ou mundial (ex: São Paulo, Rio de Janeiro, Curitiba)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "São Paulo"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Previsão do tempo obtida com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Previsão do tempo obtida com sucesso" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "city": { "type": "string", "example": "São Paulo, SP" },
+                        "temperature": { "type": "integer", "example": 24 },
+                        "feelsLike": { "type": "integer", "example": 25 },
+                        "humidity": { "type": "integer", "example": 65 },
+                        "windSpeed": { "type": "integer", "example": 14 },
+                        "condition": { "type": "string", "example": "Parcialmente Nublado" },
+                        "tempMax": { "type": "integer", "example": 28 },
+                        "tempMin": { "type": "integer", "example": 18 },
+                        "isDay": { "type": "boolean", "example": true }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/weather/cities": {
+      "get": {
+        "tags": ["Clima & Temperatura"],
+        "summary": "Lista cidades populares disponíveis",
+        "description": "Retorna lista de capitais e cidades pré-configuradas para preenchimento rápido.",
+        "responses": {
+          "200": {
+            "description": "Lista de cidades retornada com sucesso"
+          }
+        }
+      }
+    },
+    "/feed/general": {
+      "get": {
+        "tags": ["Feed & Notícias Gerais"],
+        "summary": "Obtém feed de notícias em tempo real",
+        "description": "Retorna manchetes e resumos das notícias mais recentes para a cena de feed no estilo telejornal.",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "description": "Categoria do feed (geral, tecnologia, economia, esportes)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["geral", "tecnologia", "economia", "esportes"],
+              "default": "geral"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Feed de notícias obtido com sucesso"
+          }
+        }
+      }
+    },
+    "/feed/g1": {
+      "get": {
+        "tags": ["Feed & Notícias Gerais"],
+        "summary": "Obtém as principais notícias em tempo real do feed RSS oficial do G1 / Globo",
+        "description": "Faz a leitura e parser do XML RSS oficial do G1 (https://g1.globo.com/dynamo/rss2.xml), extraindo títulos, fotos das reportagens, lides e datas de publicação.",
+        "responses": {
+          "200": {
+            "description": "Notícias do G1 obtidas com sucesso via RSS"
+          }
+        }
+      }
+    },
+    "/feed/categories": {
+      "get": {
+        "tags": ["Feed & Notícias Gerais"],
+        "summary": "Lista categorias de feed disponíveis",
+        "description": "Retorna as categorias de notícias disponíveis para configuração da cena.",
+        "responses": {
+          "200": {
+            "description": "Categorias obtidas com sucesso"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -371,9 +489,9 @@
           },
           "type": {
             "type": "string",
-            "enum": ["text", "image"],
+            "enum": ["text", "image", "weather", "feed"],
             "example": "image",
-            "description": "Tipo de notícia (imagem ou texto com gradiente)"
+            "description": "Tipo de notícia ou cena (text = texto com gradiente, image = com foto, weather = cena de clima e temperatura, feed = notícias ao vivo)"
           },
           "title": {
             "type": "string",
@@ -405,6 +523,18 @@
             "example": 5,
             "description": "Tempo em segundos que esta notícia permanecerá visível na rotação do carrossel"
           },
+          "publishAt": {
+            "type": "integer",
+            "nullable": true,
+            "example": 1794432000000,
+            "description": "Timestamp em milissegundos do início programado da exibição (agendamento antecipado)"
+          },
+          "publishAtIso": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "example": "2026-11-12T08:00:00.000Z"
+          },
           "expiresAt": {
             "type": "integer",
             "nullable": true,
@@ -415,7 +545,17 @@
             "type": "string",
             "nullable": true,
             "format": "date-time",
-            "example": "2026-11-12T00:00:00.000Z"
+            "example": "2026-11-12T18:00:00.000Z"
+          },
+          "isScheduled": {
+            "type": "boolean",
+            "example": false,
+            "description": "Indica se o conteúdo está agendado para exibição futura"
+          },
+          "isLive": {
+            "type": "boolean",
+            "example": true,
+            "description": "Indica se o conteúdo está atualmente no ar no painel"
           },
           "isExpired": {
             "type": "boolean",
@@ -448,7 +588,7 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["text", "image"],
+            "enum": ["text", "image", "weather", "feed"],
             "default": "text",
             "example": "image"
           },
@@ -483,11 +623,17 @@
             "example": 10,
             "description": "Segundos de permanência no carrossel (mínimo 2)"
           },
+          "publishAt": {
+            "type": "integer",
+            "nullable": true,
+            "example": 1794432000000,
+            "description": "Timestamp em ms de início da exibição (agendamento antecipado) ou null se imediato"
+          },
           "expiresAt": {
             "type": "integer",
             "nullable": true,
             "example": 1794439000000,
-            "description": "Timestamp em ms de validade ou null se permanente"
+            "description": "Timestamp em ms de término da exibição ou null se permanente"
           },
           "authorId": {
             "type": "integer",

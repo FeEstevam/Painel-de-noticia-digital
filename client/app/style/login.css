@@ -9,3 +9,36 @@ body {
   color: #e2e3e9;
 }
 
+/* Transição leve e suave para o carrossel de notícias */
+@keyframes carouselFade {
+  0% {
+    opacity: 0;
+    transform: scale(0.988) translateY(4px);
+    filter: blur(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
+}
+
+.animate-carousel-fade {
+  animation: carouselFade 700ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity, transform, filter;
+}
+
+@keyframes kenBurnsSlow {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.05);
+  }
+}
+
+.animate-ken-burns {
+  animation: kenBurnsSlow 12s ease-out forwards;
+  will-change: transform;
+}
+

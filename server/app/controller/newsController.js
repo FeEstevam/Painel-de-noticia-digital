@@ -32,25 +32,29 @@ class NewsController {
    */
   static async create(req, res) {
     try {
-      const { type, title, content, imageUrl, category, bgColor, slideDuration, expiresAt, authorId } = req.body;
+      const { type, title, content, imageUrl, category, bgColor, slideDuration, publishAt, expiresAt, authorId } = req.body;
 
       // Validação obrigatória
       if (!title || !title.trim()) {
-        return ResponseView.error(res, 'O título da notícia é obrigatório', 400);
+        return ResponseView.error(res, 'O título da notícia ou cena é obrigatório', 400);
       }
 
       if (type === 'image' && (!imageUrl || !imageUrl.trim())) {
         return ResponseView.error(res, 'A URL da imagem é obrigatória para notícias com imagem', 400);
       }
 
+      const validTypes = ['text', 'image', 'weather', 'feed'];
+      const resolvedType = validTypes.includes(type) ? type : 'text';
+
       const created = await NewsModel.create({
-        type: type === 'image' ? 'image' : 'text',
+        type: resolvedType,
         title: title.trim(),
         content: content ? content.trim() : '',
         imageUrl: imageUrl ? imageUrl.trim() : null,
-        category: category ? category.trim() : 'Geral',
+        category: category ? category.trim() : (resolvedType === 'weather' ? 'Previsão do Tempo' : resolvedType === 'feed' ? 'Notícias em Tempo Real' : 'Geral'),
         bgColor: bgColor || 'from-indigo-600 via-purple-600 to-pink-600',
         slideDuration: slideDuration ? Math.max(2, Number(slideDuration)) : 5,
+        publishAt: publishAt || null,
         expiresAt: expiresAt || null,
         authorId: authorId || null
       });
@@ -130,6 +134,26 @@ class NewsController {
           slideDuration: 6,
           bgColor: '#0891b2',
           expiresAt: new Date(Date.now() + 120 * 60 * 1000)
+        },
+        {
+          type: 'weather',
+          title: 'São Paulo, SP',
+          content: 'Previsão do tempo para hoje e próximos dias com sensação térmica e umidade',
+          imageUrl: null,
+          category: 'Clima & Tempo',
+          slideDuration: 7,
+          bgColor: 'from-sky-600 via-blue-700 to-indigo-900',
+          expiresAt: null
+        },
+        {
+          type: 'feed',
+          title: 'Giro de Notícias do Dia',
+          content: 'Principais atualizações em tempo real sobre inovação, economia e tendências',
+          imageUrl: null,
+          category: 'Notícias ao Vivo',
+          slideDuration: 9,
+          bgColor: 'from-rose-700 via-red-800 to-neutral-900',
+          expiresAt: null
         }
       ];
 
