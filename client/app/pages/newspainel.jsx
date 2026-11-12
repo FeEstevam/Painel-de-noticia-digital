@@ -1,8 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Eye, SlidersHorizontal, CheckCircle2, Database } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Sparkles,
+  Eye,
+  SlidersHorizontal,
+  CheckCircle2,
+  Database,
+  Tv,
+  LogOut,
+  UserCheck
+} from 'lucide-react';
 import DisplayMode from '../components/DisplayMode';
 import NewsManager from '../components/NewsManager';
 import { api } from '../../lib/api';
+import { isAuthenticated, getUser, logout } from '../../lib/auth';
 
 // Dados iniciais de fallback
 const INITIAL_NEWS = [
@@ -66,6 +77,17 @@ const INITIAL_NEWS = [
 ];
 
 export default function NewsPainel() {
+  const navigate = useNavigate();
+
+  // Proteção de Rota: se o usuário não estiver autenticado, redireciona para a página index
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      navigate('/', { replace: true });
+    }
+  }, [navigate]);
+
+  const [currentUser, setCurrentUser] = useState(() => getUser());
+
   const [newsList, setNewsList] = useState(() => {
     try {
       const saved = localStorage.getItem('newsList');
@@ -79,7 +101,7 @@ export default function NewsPainel() {
     return INITIAL_NEWS;
   });
 
-  const [activeTab, setActiveTab] = useState('display'); // 'display' ou 'manage'
+  const [activeTab, setActiveTab] = useState('manage'); // 'manage' (padrão) ou 'display'
   const [toast, setToast] = useState(null);
   const [isDbConnected, setIsDbConnected] = useState(false);
 
@@ -126,7 +148,6 @@ export default function NewsPainel() {
   // Sincronização e monitoramento de agendamentos e expirações em tempo real
   useEffect(() => {
     const timer = setInterval(() => {
-      // Força reavaliação suave a cada 5 segundos para transição automática de agendadas para 'No Ar'
       setNewsList((prevList) => [...prevList]);
     }, 5000);
 
@@ -161,68 +182,120 @@ export default function NewsPainel() {
     }
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white relative overflow-x-hidden">
       {/* Luzes de Fundo Decorativas */}
       <div className="fixed top-[-10%] left-[-10%] w-[350px] sm:w-[500px] h-[350px] sm:h-[500px] bg-indigo-600/10 rounded-full blur-[100px] sm:blur-[140px] pointer-events-none" />
       <div className="fixed bottom-[-10%] right-[-10%] w-[350px] sm:w-[500px] h-[350px] sm:h-[500px] bg-purple-600/10 rounded-full blur-[100px] sm:blur-[140px] pointer-events-none" />
 
-      {/* CABEÇALHO / NAVEGAÇÃO DE MODO RESPONSIVA */}
+      {/* CABEÇALHO / NAVEGAÇÃO ADMINISTRATIVA RESPONSIVA */}
       <header className="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-xl border-b border-slate-800/80 px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
           {/* Logo e Título */}
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25 shrink-0">
-              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-base sm:text-xl font-bold bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent truncate">
-                  Painel Digital de Notícias
-                </h1>
-                <span
-                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border shrink-0 ${
-                    isDbConnected
-                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                      : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                  }`}
-                  title={isDbConnected ? 'Conectado ao Banco SQLite (Prisma)' : 'Aguardando inicialização do backend'}
-                >
-                  <Database className="w-3 h-3" />
-                  <span>{isDbConnected ? 'Banco Ativo' : 'SQLite Pronto'}</span>
-                </span>
+          <div className="flex items-center justify-between sm:justify-start gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25 shrink-0">
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
-              <p className="text-[11px] sm:text-xs text-slate-400 truncate">
-                Display informativo e gerenciamento de notícias
-              </p>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-base sm:text-xl font-bold bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent truncate">
+                    Painel Administrativo
+                  </h1>
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border shrink-0 ${
+                      isDbConnected
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                        : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                    }`}
+                    title={isDbConnected ? 'Conectado ao Banco SQLite (Prisma)' : 'Aguardando inicialização do backend'}
+                  >
+                    <Database className="w-3 h-3" />
+                    <span>{isDbConnected ? 'Banco Ativo' : 'SQLite Pronto'}</span>
+                  </span>
+                </div>
+                {currentUser && (
+                  <p className="text-[11px] sm:text-xs text-indigo-300 truncate flex items-center gap-1">
+                    <UserCheck className="w-3 h-3 text-indigo-400 inline" />
+                    <span>Operador: <strong>{currentUser.name || currentUser.email}</strong></span>
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Atalhos Rápidos (Mobile) */}
+            <div className="sm:hidden flex items-center gap-1">
+              <button
+                onClick={() => navigate('/')}
+                className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white border border-slate-700"
+                title="Ir para a Tela de Exibição Pública"
+              >
+                <Tv className="w-4 h-4" />
+              </button>
+              <button
+                onClick={handleLogout}
+                className="p-2 rounded-xl bg-slate-800 text-red-400 hover:text-red-300 border border-slate-700"
+                title="Sair"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
             </div>
           </div>
 
-          {/* Abas: Modo Exibição vs Gerenciador (100% responsivo em celulares) */}
-          <div className="flex items-center gap-1.5 bg-slate-950/70 p-1 rounded-xl border border-slate-800 w-full sm:w-auto">
-            <button
-              onClick={() => setActiveTab('display')}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer ${
-                activeTab === 'display'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-            >
-              <Eye className="w-4 h-4 shrink-0" />
-              <span>Modo Exibição</span>
-            </button>
+          {/* Abas e Ações do Cabeçalho */}
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            {/* Abas: Gerenciador vs Visualização */}
+            <div className="flex items-center gap-1.5 bg-slate-950/70 p-1 rounded-xl border border-slate-800 flex-1 sm:flex-initial">
+              <button
+                onClick={() => setActiveTab('manage')}
+                className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer ${
+                  activeTab === 'manage'
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                }`}
+              >
+                <SlidersHorizontal className="w-4 h-4 shrink-0" />
+                <span>Gerenciador</span>
+              </button>
 
-            <button
-              onClick={() => setActiveTab('manage')}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer ${
-                activeTab === 'manage'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-            >
-              <SlidersHorizontal className="w-4 h-4 shrink-0" />
-              <span>Gerenciador</span>
-            </button>
+              <button
+                onClick={() => setActiveTab('display')}
+                className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer ${
+                  activeTab === 'display'
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                }`}
+              >
+                <Eye className="w-4 h-4 shrink-0" />
+                <span>Pré-visualização</span>
+              </button>
+            </div>
+
+            {/* Botões de Ação Desktop */}
+            <div className="hidden sm:flex items-center gap-2">
+              <button
+                onClick={() => navigate('/')}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/90 hover:bg-indigo-600/30 hover:border-indigo-500/50 text-slate-300 hover:text-white border border-slate-700 text-xs font-medium transition-all cursor-pointer"
+                title="Ir para a Tela Pública / Modo TV"
+              >
+                <Tv className="w-4 h-4 text-indigo-400" />
+                <span>Modo TV (Index)</span>
+              </button>
+
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/90 hover:bg-red-500/20 hover:text-red-300 hover:border-red-500/40 text-slate-400 border border-slate-700 text-xs font-medium transition-all cursor-pointer"
+                title="Encerrar sessão"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Sair</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -243,7 +316,7 @@ export default function NewsPainel() {
         )}
       </main>
 
-      {/* TOAST FEEDBACK RESPONSIVO (NÃO QUEBRA NO CELULAR) */}
+      {/* TOAST FEEDBACK RESPONSIVO */}
       {toast && (
         <div
           className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 sm:max-w-md z-50 flex items-center gap-3 px-4 sm:px-5 py-3 rounded-2xl border shadow-2xl backdrop-blur-xl animate-bounce ${
